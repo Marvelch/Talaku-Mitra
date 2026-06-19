@@ -1,0 +1,18 @@
+# Environment
+.env
+.env.local
+
+# Binary
+talaku_mitra
+*.exe
+
+# Uploads (user-generated files)
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
