@@ -97,6 +97,7 @@ func SetupRoutes(
 			mitraOrders.PATCH("/:id/confirm", foodOrderHandler.ConfirmFoodOrder)
 			mitraOrders.PATCH("/:id/reject", foodOrderHandler.RejectFoodOrder)
 			mitraOrders.PATCH("/:id/ready", foodOrderHandler.MarkFoodReady)
+			mitraOrders.PATCH("/:id/cancel", foodOrderHandler.MitraCancelFoodOrder)
 		}
 	}
 

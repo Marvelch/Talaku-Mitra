@@ -104,7 +104,7 @@ func (r *FoodOrderRepository) AssignDriver(orderID, driverID string) error {
 	now := time.Now()
 	return r.db.Model(&models.FoodOrder{}).Where("id = ?", orderID).Updates(map[string]interface{}{
 		"driver_id":   driverID,
-		"status":      models.FoodOrderWaitingRestaurant,
+		"status":      models.FoodOrderPreparing,
 		"accepted_at": now,
 		"updated_at":  now,
 	}).Error
@@ -113,7 +113,7 @@ func (r *FoodOrderRepository) AssignDriver(orderID, driverID string) error {
 func (r *FoodOrderRepository) ConfirmByRestaurant(orderID string) error {
 	now := time.Now()
 	return r.db.Model(&models.FoodOrder{}).Where("id = ?", orderID).Updates(map[string]interface{}{
-		"status":       models.FoodOrderPreparing,
+		"status":       models.FoodOrderWaitingDriver,
 		"confirmed_at": now,
 		"updated_at":   now,
 	}).Error

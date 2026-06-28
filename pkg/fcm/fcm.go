@@ -22,9 +22,21 @@ func (s *Service) Send(token, title, body string, data map[string]string) error 
 	if s.serverKey == "" || token == "" {
 		return nil
 	}
+	return s.send(token, title, body, data)
+}
 
+// SendToTopic mengirim notifikasi FCM ke semua perangkat yang subscribe topic.
+// topic harus tanpa prefix "/topics/" — method ini menambahkannya sendiri.
+func (s *Service) SendToTopic(topic, title, body string, data map[string]string) error {
+	if s.serverKey == "" || topic == "" {
+		return nil
+	}
+	return s.send("/topics/"+topic, title, body, data)
+}
+
+func (s *Service) send(to, title, body string, data map[string]string) error {
 	payload := map[string]interface{}{
-		"to": token,
+		"to": to,
 		"notification": map[string]string{
 			"title": title,
 			"body":  body,

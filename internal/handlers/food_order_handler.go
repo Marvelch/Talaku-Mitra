@@ -111,7 +111,7 @@ func (h *FoodOrderHandler) CreateFoodOrder(c *gin.Context) {
 		ID:              uuid.New().String(),
 		UserID:          userID,
 		StoreID:         req.StoreID,
-		Status:          models.FoodOrderWaitingDriver,
+		Status:          models.FoodOrderWaitingRestaurant,
 		Subtotal:        subtotal,
 		DeliveryFee:     req.DeliveryFee,
 		ServiceFee:      req.ServiceFee,
@@ -129,9 +129,9 @@ func (h *FoodOrderHandler) CreateFoodOrder(c *gin.Context) {
 		return
 	}
 
-	// Notify mitra bahwa ada pesanan baru masuk
+	// Notify mitra bahwa ada pesanan baru masuk — driver belum dilibatkan
 	go h.sendMitraFcm(req.StoreID,
-		"Pesanan Makanan Baru!",
+		"Pesanan Makanan Baru! 🍽️",
 		"Ada pesanan baru menunggu konfirmasi Anda.",
 		map[string]string{"type": "new_food_order", "order_id": order.ID},
 	)
@@ -300,18 +300,18 @@ func (h *FoodOrderHandler) AcceptFoodOrder(c *gin.Context) {
 		}
 	}
 
-	// Notify mitra bahwa driver sudah ditemukan
+	// Notify mitra bahwa driver dikonfirmasi — pesanan bisa diproses
 	if order != nil {
 		go h.sendMitraFcm(order.StoreID,
-			"Driver Ditemukan!",
-			"Driver sudah menerima pesanan. Segera konfirmasi untuk mulai memasak.",
+			"Driver Dikonfirmasi! 🛵",
+			"Pesanan bisa diproses/dibuat, driver sedang menuju restoran.",
 			map[string]string{"type": "driver_accepted", "order_id": orderID},
 		)
 	}
 
 	response.Success(c, http.StatusOK, "Pesanan berhasil diterima.", gin.H{
 		"order_id":      orderID,
-		"status":        models.FoodOrderWaitingRestaurant,
+		"status":        models.FoodOrderPreparing,
 		"store_name":    storeName,
 		"store_address": storeAddress,
 		"store_phone":   storePhone,
@@ -436,6 +436,7 @@ func (h *FoodOrderHandler) GetMitraFoodOrders(c *gin.Context) {
 	}
 
 	activeStatuses := []models.FoodOrderStatus{
+		models.FoodOrderWaitingDriver,
 		models.FoodOrderWaitingRestaurant,
 		models.FoodOrderPreparing,
 		models.FoodOrderReady,
@@ -476,7 +477,25 @@ func (h *FoodOrderHandler) ConfirmFoodOrder(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, "Gagal mengkonfirmasi pesanan.", nil)
 		return
 	}
-	response.Success(c, http.StatusOK, "Pesanan dikonfirmasi. Sedang dipersiapkan.", nil)
+
+	// Setelah restoran terima, broadcast ke semua driver online
+	go func() {
+		store, err := h.storeRepo.FindByID(order.StoreID)
+		storeName := ""
+		if err == nil && store != nil {
+			storeName = store.Name
+		}
+		if err := h.fcm.SendToTopic(
+			"food_order_available",
+			"Pesanan Makanan Tersedia! 🛵",
+			"Ada pesanan makanan dari "+storeName+" menunggu driver.",
+			map[string]string{"type": "new_food_order", "order_id": orderID},
+		); err != nil {
+			log.Printf("[FCM] gagal kirim ke topic driver: %v", err)
+		}
+	}()
+
+	response.Success(c, http.StatusOK, "Pesanan dikonfirmasi. Menunggu driver.", nil)
 }
 
 // RejectFoodOrder PATCH /api/v1/mitra/food-orders/:id/reject
@@ -538,6 +557,32 @@ func (h *FoodOrderHandler) MarkFoodReady(c *gin.Context) {
 		return
 	}
 	response.Success(c, http.StatusOK, "Makanan siap untuk diambil driver.", nil)
+}
+
+// MitraCancelFoodOrder PATCH /api/v1/mitra/food-orders/:id/cancel
+func (h *FoodOrderHandler) MitraCancelFoodOrder(c *gin.Context) {
+	mitraUID := c.GetString("userUID")
+	orderID := c.Param("id")
+
+	if err := h.validateMitraOwnsOrder(mitraUID, orderID); err != nil {
+		response.Error(c, http.StatusForbidden, err.Error(), nil)
+		return
+	}
+
+	order, err := h.orderRepo.FindByID(orderID)
+	if err != nil || order == nil {
+		response.Error(c, http.StatusNotFound, "Pesanan tidak ditemukan.", nil)
+		return
+	}
+	if order.Status != models.FoodOrderWaitingDriver && order.Status != models.FoodOrderWaitingRestaurant {
+		response.Error(c, http.StatusUnprocessableEntity, "Pesanan tidak dapat dibatalkan pada status ini.", nil)
+		return
+	}
+	if err := h.orderRepo.Cancel(orderID, "Dibatalkan oleh restoran"); err != nil {
+		response.Error(c, http.StatusInternalServerError, "Gagal membatalkan pesanan.", nil)
+		return
+	}
+	response.Success(c, http.StatusOK, "Pesanan berhasil dibatalkan.", nil)
 }
 
 func (h *FoodOrderHandler) validateMitraOwnsOrder(mitraUID, orderID string) error {
