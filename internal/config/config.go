@@ -22,6 +22,10 @@ type Config struct {
 	JWTAccessExpiry  string
 	JWTRefreshExpiry string
 
+	// JWT secret yang sama dengan talaku-microservice, dipakai untuk validasi
+	// token customer dan driver yang diterbitkan oleh main service.
+	MainJWTSecret string
+
 	ServerPort string
 
 	SMTPHost     string
@@ -67,6 +71,8 @@ func Load() {
 		JWTRefreshSecret: mustGetEnv("JWT_REFRESH_SECRET"),
 		JWTAccessExpiry:  getEnv("JWT_ACCESS_EXPIRY", "15m"),
 		JWTRefreshExpiry: getEnv("JWT_REFRESH_EXPIRY", "168h"),
+
+		MainJWTSecret: mustGetEnv("MAIN_JWT_SECRET"),
 
 		ServerPort: getEnv("SERVER_PORT", "8080"),
 

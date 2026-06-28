@@ -578,3 +578,22 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		"created_at":        user.CreatedAt,
 	})
 }
+
+
+// UpdateFcmToken PATCH /api/v1/auth/fcm-token
+func (h *AuthHandler) UpdateFcmToken(c *gin.Context) {
+	userUID := c.GetString("userUID")
+
+	var req struct {
+		Token string `json:"token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "Token wajib diisi.", nil)
+		return
+	}
+	if err := h.userRepo.UpdateFcmToken(userUID, req.Token); err != nil {
+		response.Error(c, http.StatusInternalServerError, "Gagal menyimpan FCM token.", nil)
+		return
+	}
+	response.Success(c, http.StatusOK, "FCM token berhasil disimpan.", nil)
+}

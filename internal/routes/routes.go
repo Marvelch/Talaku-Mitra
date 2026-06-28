@@ -20,6 +20,7 @@ func SetupRoutes(
 	foodHandler *handlers.FoodHandler,
 	uploadHandler *handlers.UploadHandler,
 	cfgHandler *handlers.ConfigHandler,
+	foodOrderHandler *handlers.FoodOrderHandler,
 	userRepo userFinderForRoute,
 ) {
 	// Sajikan file upload secara statis
@@ -50,6 +51,7 @@ func SetupRoutes(
 	{
 		authProtected.POST("/logout", authHandler.Logout)
 		authProtected.GET("/profile", authHandler.GetProfile)
+		authProtected.PATCH("/fcm-token", authHandler.UpdateFcmToken)
 	}
 
 	// Public: service status
@@ -87,5 +89,34 @@ func SetupRoutes(
 		// Food photos (multipart/form-data, field: "image") — max 5 per makanan
 		mitra.POST("/stores/:id/foods/:food_id/images", uploadHandler.UploadFoodImage)
 		mitra.DELETE("/stores/:id/foods/:food_id/images/:image_id", uploadHandler.DeleteFoodImage)
+
+		// Mitra food order management
+		mitraOrders := mitra.Group("/mitra/food-orders")
+		{
+			mitraOrders.GET("", foodOrderHandler.GetMitraFoodOrders)
+			mitraOrders.PATCH("/:id/confirm", foodOrderHandler.ConfirmFoodOrder)
+			mitraOrders.PATCH("/:id/reject", foodOrderHandler.RejectFoodOrder)
+			mitraOrders.PATCH("/:id/ready", foodOrderHandler.MarkFoodReady)
+		}
+	}
+
+	// ── Customer food order endpoints (customer JWT dari main service) ──────
+	customer := v1.Group("/customer")
+	customer.Use(middleware.CustomerAuthRequired())
+	{
+		customer.POST("/food-orders", foodOrderHandler.CreateFoodOrder)
+		customer.GET("/food-orders/:id", foodOrderHandler.GetFoodOrderStatus)
+		customer.PATCH("/food-orders/:id/cancel", foodOrderHandler.CancelFoodOrder)
+	}
+
+	// ── Driver food order endpoints (driver JWT dari main service) ──────────
+	driverFO := v1.Group("/driver")
+	driverFO.Use(middleware.DriverAuthRequired())
+	{
+		driverFO.GET("/food-orders", foodOrderHandler.GetAvailableFoodOrders)
+		driverFO.GET("/food-orders/:id", foodOrderHandler.GetDriverFoodOrderDetail)
+		driverFO.PATCH("/food-orders/:id/accept", foodOrderHandler.AcceptFoodOrder)
+		driverFO.PATCH("/food-orders/:id/pickup", foodOrderHandler.MarkOnDelivery)
+		driverFO.PATCH("/food-orders/:id/delivered", foodOrderHandler.MarkDelivered)
 	}
 }

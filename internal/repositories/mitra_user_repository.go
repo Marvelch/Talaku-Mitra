@@ -99,3 +99,18 @@ func (r *MitraUserRepository) HardDeleteByUID(uid string) error {
 func (r *MitraUserRepository) UpdateCoreFields(uid string, updates map[string]interface{}) error {
 	return r.db.Model(&models.MitraUser{}).Where("uid = ?", uid).Updates(updates).Error
 }
+
+// UpdateFcmToken menyimpan FCM device token milik mitra.
+func (r *MitraUserRepository) UpdateFcmToken(uid, token string) error {
+	return r.db.Model(&models.MitraUser{}).Where("uid = ?", uid).Update("fcm_token", token).Error
+}
+
+// FindFcmTokenByUID mengembalikan FCM token milik mitra (bisa nil jika belum diset).
+func (r *MitraUserRepository) FindFcmTokenByUID(uid string) (*string, error) {
+	var user models.MitraUser
+	err := r.db.Select("fcm_token").Where("uid = ?", uid).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return user.FcmToken, nil
+}

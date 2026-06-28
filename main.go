@@ -7,6 +7,7 @@ import (
 	"talaku_mitra/internal/models"
 	"talaku_mitra/internal/repositories"
 	"talaku_mitra/internal/routes"
+	"talaku_mitra/pkg/fcm"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -52,7 +53,8 @@ func main() {
 	foodHandler := handlers.NewFoodHandler(foodRepo, storeRepo)
 	uploadHandler := handlers.NewUploadHandler(uploadRepo, storeRepo, foodRepo)
 	cfgHandler := handlers.NewConfigHandler(cfgRepo, userRepo)
-	foodOrderHandler := handlers.NewFoodOrderHandler(foodOrderRepo, foodRepo, storeRepo)
+	fcmSvc := fcm.New()
+	foodOrderHandler := handlers.NewFoodOrderHandler(foodOrderRepo, foodRepo, storeRepo, userRepo, fcmSvc)
 
 	r := gin.Default()
 	r.SetTrustedProxies(nil)

@@ -18,6 +18,7 @@ type MitraUser struct {
 	IsApprovedFood         *bool      `gorm:"column:is_approved_food;default:false" json:"is_approved_food"`
 	IsApprovedMart         *bool      `gorm:"column:is_approved_mart;default:false" json:"is_approved_mart"`
 	LastLogin              *time.Time `gorm:"column:last_login" json:"last_login"`
+	FcmToken               *string    `gorm:"column:fcm_token;type:text" json:"-"`
 	IsActive               bool       `gorm:"column:is_active;default:true" json:"is_active"`
 	CreatedAt              time.Time  `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt              time.Time  `gorm:"column:updated_at" json:"updated_at"`
