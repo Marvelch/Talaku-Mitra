@@ -142,6 +142,53 @@ func runMigrations(db *gorm.DB) {
 		`ALTER TABLE mitra_users ADD COLUMN IF NOT EXISTS is_approved_food BOOLEAN NOT NULL DEFAULT FALSE`,
 		`ALTER TABLE mitra_users ADD COLUMN IF NOT EXISTS is_approved_mart BOOLEAN NOT NULL DEFAULT FALSE`,
 
+		// ── Tabel pesanan makanan ────────────────────────────────────────────
+		`CREATE TABLE IF NOT EXISTS food_orders (
+			id               UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id          UUID           NOT NULL,
+			driver_id        UUID,
+			store_id         UUID           NOT NULL REFERENCES mitra_stores(id) ON DELETE RESTRICT,
+			status           VARCHAR(30)    NOT NULL DEFAULT 'waiting_driver',
+			subtotal         NUMERIC(12,2)  NOT NULL DEFAULT 0,
+			delivery_fee     NUMERIC(12,2)  NOT NULL DEFAULT 0,
+			service_fee      NUMERIC(12,2)  NOT NULL DEFAULT 0,
+			total            NUMERIC(12,2)  NOT NULL DEFAULT 0,
+			delivery_address TEXT           NOT NULL,
+			delivery_lat     DOUBLE PRECISION,
+			delivery_lng     DOUBLE PRECISION,
+			note             TEXT,
+			vehicle_type_id  INTEGER,
+			vehicle_type_name VARCHAR(50),
+			driver_amount    NUMERIC(12,2),
+			talaku_gross     NUMERIC(12,2),
+			tax_amount       NUMERIC(12,2),
+			talaku_net       NUMERIC(12,2),
+			accepted_at      TIMESTAMPTZ,
+			confirmed_at     TIMESTAMPTZ,
+			delivered_at     TIMESTAMPTZ,
+			cancelled_at     TIMESTAMPTZ,
+			cancel_reason    TEXT,
+			created_at       TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+			updated_at       TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_food_orders_user_id   ON food_orders(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_food_orders_driver_id  ON food_orders(driver_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_food_orders_store_id   ON food_orders(store_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_food_orders_status     ON food_orders(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_food_orders_created_at ON food_orders(created_at DESC)`,
+
+		`CREATE TABLE IF NOT EXISTS food_order_items (
+			id          UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
+			order_id    UUID           NOT NULL REFERENCES food_orders(id) ON DELETE CASCADE,
+			food_id     UUID           NOT NULL,
+			food_name   VARCHAR(150)   NOT NULL,
+			food_price  NUMERIC(12,2)  NOT NULL,
+			quantity    INTEGER        NOT NULL DEFAULT 1,
+			subtotal    NUMERIC(12,2)  NOT NULL,
+			created_at  TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_food_order_items_order_id ON food_order_items(order_id)`,
+
 		// ── Seed config layanan mitra jika belum ada ────────────────────────
 		`INSERT INTO app_configs (parameter_key, parameter_value, description, is_active)
 		 SELECT 'SERVICE_MART_ENABLED', 'true', 'Layanan mart Talaku Mitra', true
