@@ -115,6 +115,7 @@ func SetupRoutes(
 	driverFO.Use(middleware.DriverAuthRequired())
 	{
 		driverFO.GET("/food-orders", foodOrderHandler.GetAvailableFoodOrders)
+		driverFO.GET("/food-orders/active", foodOrderHandler.GetDriverActiveFoodOrder)
 		driverFO.GET("/food-orders/:id", foodOrderHandler.GetDriverFoodOrderDetail)
 		driverFO.PATCH("/food-orders/:id/accept", foodOrderHandler.AcceptFoodOrder)
 		driverFO.PATCH("/food-orders/:id/pickup", foodOrderHandler.MarkOnDelivery)

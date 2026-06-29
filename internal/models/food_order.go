@@ -118,6 +118,7 @@ type DriverFoodOrderItem struct {
 	StorePhone      string          `json:"store_phone"`
 	StoreLogoURL    string          `json:"store_logo_url"`
 	CustomerName    string          `json:"customer_name"`
+	CustomerPhone   string          `json:"customer_phone"`
 	DeliveryAddress string          `json:"delivery_address"`
 	DeliveryLat     *float64        `json:"delivery_lat"`
 	DeliveryLng     *float64        `json:"delivery_lng"`

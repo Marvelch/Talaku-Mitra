@@ -148,7 +148,7 @@ func runMigrations(db *gorm.DB) {
 			user_id          UUID           NOT NULL,
 			driver_id        UUID,
 			store_id         UUID           NOT NULL REFERENCES mitra_stores(id) ON DELETE RESTRICT,
-			status           VARCHAR(30)    NOT NULL DEFAULT 'waiting_driver',
+			status           VARCHAR(30)    NOT NULL DEFAULT 'waiting_restaurant',
 			subtotal         NUMERIC(12,2)  NOT NULL DEFAULT 0,
 			delivery_fee     NUMERIC(12,2)  NOT NULL DEFAULT 0,
 			service_fee      NUMERIC(12,2)  NOT NULL DEFAULT 0,

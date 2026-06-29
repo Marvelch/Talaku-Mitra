@@ -66,6 +66,26 @@ func (r *FoodOrderRepository) FindByIDAndDriverID(id, driverID string) (*models.
 	return &order, err
 }
 
+// FindActiveByDriver mengembalikan food order yang sedang aktif (sedang diproses) oleh driver.
+func (r *FoodOrderRepository) FindActiveByDriver(driverID string) (*models.FoodOrder, error) {
+	var order models.FoodOrder
+	err := r.db.
+		Preload("Store").
+		Preload("Items").
+		Where("driver_id = ? AND status IN ?", driverID, []models.FoodOrderStatus{
+			models.FoodOrderPreparing,
+			models.FoodOrderReady,
+			models.FoodOrderOnDelivery,
+		}).
+		Order("created_at DESC").
+		Limit(1).
+		First(&order).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &order, err
+}
+
 // FindAvailableForDriver mengembalikan order makanan dengan status waiting_driver.
 func (r *FoodOrderRepository) FindAvailableForDriver() ([]models.FoodOrder, error) {
 	var orders []models.FoodOrder
@@ -76,6 +96,28 @@ func (r *FoodOrderRepository) FindAvailableForDriver() ([]models.FoodOrder, erro
 		Order("created_at DESC").
 		Find(&orders).Error
 	return orders, err
+}
+
+// GetCustomerInfo mengambil full_name dan phone_number dari tabel users berdasarkan userID.
+// Mengembalikan dua map: [userID → fullName] dan [userID → phone].
+func (r *FoodOrderRepository) GetCustomerInfo(userIDs []string) (map[string]string, map[string]string) {
+	names := map[string]string{}
+	phones := map[string]string{}
+	if len(userIDs) == 0 {
+		return names, phones
+	}
+	type row struct {
+		UIDText     string `gorm:"column:uid_text"`
+		FullName    string `gorm:"column:full_name"`
+		PhoneNumber string `gorm:"column:phone_number"`
+	}
+	var rows []row
+	r.db.Raw(`SELECT uid::text AS uid_text, full_name, phone_number FROM users WHERE uid::text IN ?`, userIDs).Scan(&rows)
+	for _, u := range rows {
+		names[u.UIDText] = u.FullName
+		phones[u.UIDText] = u.PhoneNumber
+	}
+	return names, phones
 }
 
 // FindByStoreAndStatus mengembalikan order untuk restoran berdasarkan status.

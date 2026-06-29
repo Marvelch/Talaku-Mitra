@@ -229,6 +229,13 @@ func (h *FoodOrderHandler) GetAvailableFoodOrders(c *gin.Context) {
 		return
 	}
 
+	// Batch-fetch customer names and phones from shared users table
+	userIDs := make([]string, 0, len(orders))
+	for _, o := range orders {
+		userIDs = append(userIDs, o.UserID)
+	}
+	customerNames, customerPhones := h.orderRepo.GetCustomerInfo(userIDs)
+
 	result := make([]models.DriverFoodOrderItem, 0, len(orders))
 	for _, o := range orders {
 		storeName, storeAddress, storePhone, storeLogoURL := "", "", "", ""
@@ -253,6 +260,8 @@ func (h *FoodOrderHandler) GetAvailableFoodOrders(c *gin.Context) {
 			StoreAddress:    storeAddress,
 			StorePhone:      storePhone,
 			StoreLogoURL:    storeLogoURL,
+			CustomerName:    customerNames[o.UserID],
+			CustomerPhone:   customerPhones[o.UserID],
 			DeliveryAddress: o.DeliveryAddress,
 			DeliveryLat:     o.DeliveryLat,
 			DeliveryLng:     o.DeliveryLng,
@@ -360,6 +369,47 @@ func (h *FoodOrderHandler) GetDriverFoodOrderDetail(c *gin.Context) {
 		"delivery_lng":     order.DeliveryLng,
 		"note":             order.Note,
 		"cancel_reason":    order.CancelReason,
+		"created_at":       order.CreatedAt.Format(time.RFC3339),
+	})
+}
+
+// GetDriverActiveFoodOrder GET /api/v1/driver/food-orders/active
+func (h *FoodOrderHandler) GetDriverActiveFoodOrder(c *gin.Context) {
+	driverID := c.GetString("driverUID")
+
+	order, err := h.orderRepo.FindActiveByDriver(driverID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Terjadi kesalahan server.", nil)
+		return
+	}
+	if order == nil {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	storeName, storeAddress, storePhone := "", "", ""
+	if order.Store != nil {
+		storeName = order.Store.Name
+		storeAddress = order.Store.Address
+		if order.Store.Phone != nil {
+			storePhone = *order.Store.Phone
+		}
+	}
+
+	names, phones := h.orderRepo.GetCustomerInfo([]string{order.UserID})
+
+	response.Success(c, http.StatusOK, "OK", gin.H{
+		"id":               order.ID,
+		"status":           order.Status,
+		"store_name":       storeName,
+		"store_address":    storeAddress,
+		"store_phone":      storePhone,
+		"items":            order.Items,
+		"total":            order.Total,
+		"delivery_fee":     order.DeliveryFee,
+		"delivery_address": order.DeliveryAddress,
+		"customer_name":    names[order.UserID],
+		"customer_phone":   phones[order.UserID],
 		"created_at":       order.CreatedAt.Format(time.RFC3339),
 	})
 }
